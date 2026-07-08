@@ -21,7 +21,7 @@ export function Login() {
       setToken(access_token)
       navigate('/', { replace: true })
     } catch {
-      setError('Invalid email or password')
+      setError('Invalid username or password')
     } finally {
       setLoading(false)
     }
@@ -32,14 +32,15 @@ export function Login() {
       <form className={styles.card} onSubmit={submit}>
         <h1 className={styles.heading}>64cam</h1>
         <label className={styles.label}>
-          Email
+          Username
           <input
             className={styles.input}
-            type="email"
+            type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoFocus
+            autoComplete="username"
           />
         </label>
         <label className={styles.label}>
