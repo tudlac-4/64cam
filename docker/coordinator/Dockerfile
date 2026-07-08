@@ -11,7 +11,7 @@ RUN npm run build
 # Always run on the BUILD host (native speed).
 # When TARGETPLATFORM ≠ BUILDPLATFORM we install the cross linker and a second
 # Rust target; the resulting binary is placed at /coordinator regardless of arch.
-FROM --platform=$BUILDPLATFORM rust:1.85-slim-bookworm AS backend-builder
+FROM --platform=$BUILDPLATFORM rust:1.88-slim-bookworm AS backend-builder
 WORKDIR /build
 
 ARG TARGETPLATFORM

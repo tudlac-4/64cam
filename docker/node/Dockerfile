@@ -1,6 +1,6 @@
 # ── Stage 1: cross-compile the node binary ───────────────────────────────────
 # Always runs on the BUILD host (native speed); cross-linker handles the rest.
-FROM --platform=$BUILDPLATFORM rust:1.85-slim-bookworm AS builder
+FROM --platform=$BUILDPLATFORM rust:1.88-slim-bookworm AS builder
 WORKDIR /build
 
 ARG TARGETPLATFORM
