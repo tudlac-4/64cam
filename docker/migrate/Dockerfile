@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rust:1.82-slim-bookworm AS builder
+FROM --platform=$BUILDPLATFORM rust:1.85-slim-bookworm AS builder
 WORKDIR /build
 
 ARG TARGETPLATFORM
