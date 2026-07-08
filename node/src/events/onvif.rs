@@ -66,7 +66,7 @@ async fn subscribe_and_poll(
                    </wsnt:Renew>"#
             ));
             if client
-                .post(&sub_addr)
+                .post(sub_addr)
                 .header("Content-Type", "application/soap+xml; charset=utf-8")
                 .body(renew_body)
                 .send()
