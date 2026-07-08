@@ -1,0 +1,110 @@
+## Standard multi-node deployment.
+##
+## Default (no TLS):
+##   docker compose up -d
+##   Access: http://<host>:8080
+##
+## With TLS (Caddy reverse proxy):
+##   DOMAIN=nvr.example.com docker compose --profile tls up -d
+##   Access: https://nvr.example.com  (or https://localhost for self-signed)
+##
+## See docs/deployment.md for full setup instructions.
+
+services:
+  postgres:
+    build:
+      context: ./docker/postgres
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-postgres:latest
+    environment:
+      POSTGRES_DB:       cam64
+      POSTGRES_USER:     cam64
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cam64_dev}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cam64 -d cam64"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/migrate/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://cam64:${DB_PASSWORD:-cam64_dev}@postgres:5432/cam64
+    restart: on-failure
+
+  coordinator:
+    build:
+      context: .
+      dockerfile: docker/coordinator/Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-coordinator:latest
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://cam64:${DB_PASSWORD:-cam64_dev}@postgres:5432/cam64
+      JWT_SECRET:   ${JWT_SECRET:?JWT_SECRET must be set}
+      BIND_ADDR:    0.0.0.0:8080
+      FRONTEND_DIR: /frontend
+      RUST_LOG:     ${RUST_LOG:-info}
+    ports:
+      # Expose coordinator directly when running without the TLS profile.
+      # Caddy (--profile tls) binds 80/443 and proxies here.
+      - "${COORDINATOR_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  node:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-node:latest
+    depends_on:
+      coordinator:
+        condition: service_started
+    environment:
+      COORDINATOR_URL: http://coordinator:8080
+      DATA_DIR:        /data
+      RUST_LOG:        ${RUST_LOG:-info}
+    volumes:
+      - node_data:/data
+    ports:
+      - "${RTSP_PORT:-8554}:8554"      # RTSP ingest
+      - "${WEBRTC_PORT:-8889}:8889/tcp" # WebRTC WHIP/WHEP
+      - "${WEBRTC_PORT:-8889}:8889/udp"
+      - "${NODE_HTTP_PORT:-8890}:8890"  # Playback HTTP server
+    restart: unless-stopped
+
+  # ── Optional TLS profile ────────────────────────────────────────────────────
+  # Enable with:  docker compose --profile tls up -d
+  # Requires:     DOMAIN environment variable
+  caddy:
+    profiles: [tls]
+    image: caddy:2-alpine
+    depends_on:
+      coordinator:
+        condition: service_started
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  node_data:
+  caddy_data:
+  caddy_config:

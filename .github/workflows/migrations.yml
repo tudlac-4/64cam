@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    paths:
+      - "migrations/**"
+      - "docker/**"
+      - "docker-compose.yml"
+      - "common/**"
+      - "coordinator/**"
+      - "node/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+  pull_request:
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start postgres (with pg_partman)
+        run: docker compose up postgres --wait
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: sqlx-cli
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgres://cam64:cam64_dev@localhost:5432/cam64
+        run: sqlx migrate run --source migrations
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run integration tests
+        run: cargo test -p coordinator

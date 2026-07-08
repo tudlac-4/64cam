@@ -1,0 +1,42 @@
+[package]
+name    = "coordinator"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "coordinator"
+path = "src/main.rs"
+
+[[bin]]
+name = "migrate"
+path = "src/bin/migrate.rs"
+
+[dependencies]
+common             = { path = "../common" }
+sqlx               = { workspace = true }
+tokio              = { workspace = true }
+anyhow             = { workspace = true }
+dotenvy            = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+axum               = { workspace = true }
+tower              = { workspace = true }
+tower-http         = { workspace = true }
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+uuid               = { workspace = true }
+chrono             = { workspace = true }
+thiserror          = { workspace = true }
+utoipa             = { workspace = true }
+utoipa-swagger-ui  = { workspace = true }
+futures-util       = "0.3"
+reqwest            = { workspace = true }
+hmac               = { workspace = true }
+sha2               = { workspace = true }
+hex                = { workspace = true }
+
+[dev-dependencies]
+testcontainers         = "0.23"
+testcontainers-modules = { version = "0.11", features = ["postgres"] }
+reqwest                = { workspace = true }
+tokio                  = { workspace = true }

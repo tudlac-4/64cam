@@ -1,0 +1,17 @@
+/target
+
+# Real env files (contain secrets) — keep .env.*.example tracked
+.env
+.env.node
+.env.single
+*.env.local
+
+# Node.js
+node_modules/
+frontend/dist/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json

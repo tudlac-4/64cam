@@ -1,0 +1,73 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.25rem 1rem;
+  background: #111;
+  border-bottom: 1px solid #222;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.online  { background: #22c55e; }
+.offline { background: #52525b; }
+
+.name {
+  color: #e4e4e7;
+  font-weight: 500;
+}
+
+.cap {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.track {
+  width: 48px;
+  height: 6px;
+  background: #27272a;
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.warn { background: #f59e0b; }
+
+.label {
+  color: #71717a;
+  font-size: 0.7rem;
+}
+
+.badge {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #3f3f46;
+  color: #a1a1aa;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

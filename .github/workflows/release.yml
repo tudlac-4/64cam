@@ -1,0 +1,164 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Lint & test ─────────────────────────────────────────────────────────────
+  test:
+    name: Rust check & test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB:       cam64_test
+          POSTGRES_USER:     cam64
+          POSTGRES_PASSWORD: cam64_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cam64"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://cam64:cam64_test@localhost:5432/cam64_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace
+
+  # ── Multi-arch Docker builds ─────────────────────────────────────────────────
+  docker:
+    name: Build ${{ matrix.image }} (${{ join(matrix.platforms, ', ') }})
+    runs-on: ubuntu-latest
+    needs: test
+    # Only push on main branch or version tags; PRs just build (no push)
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image:      coordinator
+            dockerfile: docker/coordinator/Dockerfile
+            platforms:  ["linux/amd64", "linux/arm64"]
+          - image:      node
+            dockerfile: docker/node/Dockerfile
+            platforms:  ["linux/amd64", "linux/arm64"]
+          - image:      migrate
+            dockerfile: docker/migrate/Dockerfile
+            platforms:  ["linux/amd64", "linux/arm64"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # QEMU is needed so BuildKit can pull multi-arch base images and run
+      # the (very lightweight) final runtime stages for non-native targets.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/64cam-${{ matrix.image }}
+          tags: |
+            # Tag as "latest" on pushes to main
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Tag as "main" for branch pushes
+            type=ref,event=branch
+            # Semantic version tags from git tags (v1.2.3 → 1.2.3, 1.2, 1)
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context:    .
+          file:       ${{ matrix.dockerfile }}
+          platforms:  ${{ join(matrix.platforms, ',') }}
+          push:       true
+          tags:       ${{ steps.meta.outputs.tags }}
+          labels:     ${{ steps.meta.outputs.labels }}
+          # GitHub Actions cache — dramatically speeds up repeated builds
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+  # ── GitHub Release ────────────────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: docker
+    # Only create a release for version tags
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${VERSION}$" | head -1)
+          echo "## Images" >> notes.md
+          echo "" >> notes.md
+          echo '```' >> notes.md
+          echo "ghcr.io/${{ github.repository_owner }}/64cam-coordinator:${VERSION}" >> notes.md
+          echo "ghcr.io/${{ github.repository_owner }}/64cam-node:${VERSION}" >> notes.md
+          echo '```' >> notes.md
+          if [ -n "$PREV_TAG" ]; then
+            echo "" >> notes.md
+            echo "## Changelog" >> notes.md
+            git log --oneline "${PREV_TAG}..HEAD" -- >> notes.md
+          fi
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: |
+            docker-compose.yml
+            docker-compose.node.yml
+            docker-compose.single.yml
+            .env.node.example

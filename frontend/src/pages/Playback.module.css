@@ -1,0 +1,118 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0a0a0a;
+  color: #eee;
+  font-family: sans-serif;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #111;
+  border-bottom: 1px solid #222;
+}
+
+.backBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.backBtn:hover { border-color: #888; }
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.exportBtn {
+  background: #2a7f4f;
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+}
+.exportBtn:hover { background: #33995e; }
+.exportBtn:disabled { background: #333; cursor: default; }
+
+.player {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  position: relative;
+  min-height: 0;
+}
+
+.video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.noSignal {
+  color: #555;
+  font-size: 14px;
+}
+
+.controls {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #111;
+  border-top: 1px solid #222;
+}
+
+.timelineRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.windowSelect {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.exportRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.exportRow label { color: #888; }
+
+.exportRow input[type="datetime-local"] {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color-scheme: dark;
+}
+
+.currentTime {
+  font-size: 12px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}

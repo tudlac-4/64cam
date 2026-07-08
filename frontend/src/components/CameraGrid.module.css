@@ -1,0 +1,69 @@
+:root {
+  --toolbar-h: 44px;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  /* Fill the .main column instead of the full viewport height — NodeBar sits above */
+  min-height: 0;
+  background: #050505;
+  color: #e0e0e0;
+  font-family: system-ui, sans-serif;
+}
+
+.toolbar {
+  height: var(--toolbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #111;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.sizeButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.sizeBtn {
+  padding: 4px 10px;
+  border: 1px solid #333;
+  background: transparent;
+  color: #aaa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sizeBtn:hover {
+  background: #222;
+  color: #fff;
+}
+
+.sizeBtn.active {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+.grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-template-rows: repeat(var(--cols), 1fr);
+  gap: 2px;
+  overflow: hidden;
+}

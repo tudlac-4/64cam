@@ -1,0 +1,55 @@
+# 64cam reverse proxy
+#
+# DOMAIN controls how TLS is provisioned:
+#   - Real domain (e.g. nvr.example.com): Caddy auto-provisions a Let's Encrypt
+#     certificate.  Port 80 and 443 must be reachable from the internet, or use
+#     a DNS-01 challenge provider.
+#   - LAN IP (e.g. 192.168.1.10) or "localhost": Caddy generates a self-signed
+#     certificate.  Browsers will show a security warning that you can bypass.
+#
+# Set DOMAIN in .env or as an environment variable before starting:
+#   DOMAIN=nvr.example.com docker compose --profile tls up -d
+#
+# For Let's Encrypt staging (testing):
+#   Uncomment the `acme_ca` line below.
+
+{
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$DOMAIN:localhost} {
+    # Forward all traffic to the coordinator.
+    # Caddy transparently handles WebSocket upgrades (dashboard WS, node WS),
+    # HTTP/2, and streaming responses (segment proxy, clip export).
+    reverse_proxy coordinator:8080 {
+        # flush_interval -1 forces immediate byte-by-byte flushing.
+        # Required for streaming segment data and SSE without buffering.
+        flush_interval -1
+
+        # Keep upstream connections alive for the duration of long-lived
+        # WebSocket sessions (heartbeat every 30 s by default).
+        transport http {
+            keepalive          30s
+            keepalive_idle_conns 16
+        }
+    }
+
+    # Compress text assets; skip already-compressed media
+    encode {
+        gzip
+        match {
+            header Content-Type application/json*
+            header Content-Type text/*
+            header Content-Type application/javascript*
+        }
+    }
+
+    # Minimal security headers
+    header {
+        X-Content-Type-Options  nosniff
+        X-Frame-Options         SAMEORIGIN
+        Referrer-Policy         strict-origin-when-cross-origin
+        # Remove Caddy server header
+        -Server
+    }
+}

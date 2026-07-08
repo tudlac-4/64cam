@@ -1,0 +1,47 @@
+name: cam64_mobile
+description: 64cam mobile client — live view, motion events, and playback.
+publish_to: none
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # WebRTC live view (WHEP)
+  flutter_webrtc: ^0.12.0
+
+  # Segment playback
+  video_player: ^2.9.2
+
+  # HTTP + auth interceptor
+  dio: ^5.7.0
+
+  # WebSocket for the dashboard event feed
+  web_socket_channel: ^3.0.1
+
+  # JWT token persistence
+  flutter_secure_storage: ^9.2.2
+
+  # Declarative routing
+  go_router: ^14.6.2
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # In-app motion-event notifications
+  flutter_local_notifications: ^18.0.1
+
+  # Timestamp formatting
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

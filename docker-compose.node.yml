@@ -1,0 +1,48 @@
+## Standalone node compose — use this to add a second (or third, etc.) node to
+## an existing 64cam deployment.
+##
+## Quick start:
+##   1. Admin creates the node in the coordinator UI (or via API):
+##        POST /api/v1/nodes  { "name": "node-2" }
+##      Note the returned `node_id` and `api_key`.
+##   2. Copy .env.node.example to .env.node and fill in the values.
+##   3. On the new machine:  docker compose -f docker-compose.node.yml up -d
+##
+## The node joins immediately as `approved` because the admin pre-provisioned it.
+## No pending-approval wait is needed.
+
+name: 64cam-node
+
+services:
+  node:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.node
+    environment:
+      ## These vars are also settable in .env.node — listed here for documentation.
+      ## COORDINATOR_URL: URL of the coordinator (required)
+      ## NODE_NAME:       Human-readable name shown in the UI (optional, defaults to hostname)
+      ## NODE_ID:         Pre-provisioned UUID from the coordinator (optional; if absent, node self-registers)
+      ## NODE_API_KEY:    API key returned by the coordinator for NODE_ID (required when NODE_ID is set)
+      ## DATA_DIR:        Writable directory for recordings, state.json, MediaMTX config (default /data)
+      ## NODE_HTTP_PORT:  Port for the node's playback HTTP server (default 8890)
+      ## S3_ENDPOINT:     e.g. http://minio:9000  (optional; enables S3 migration tier)
+      ## S3_BUCKET:       Bucket name (required if S3_ENDPOINT is set)
+      ## S3_KEY_ID:       Access key ID
+      ## S3_SECRET_KEY:   Secret access key
+      ## S3_REGION:       e.g. us-east-1 (default us-east-1)
+      ## S3_MIGRATE_AFTER_HOURS: Hours before a segment is eligible for S3 migration (default 2)
+      DATA_DIR: /data
+    volumes:
+      - node_data:/data
+    ports:
+      - "8554:8554"      # RTSP ingest
+      - "8889:8889/tcp"  # WebRTC/WHIP
+      - "8889:8889/udp"
+      - "8890:8890"      # Node playback HTTP server
+
+volumes:
+  node_data:

@@ -1,0 +1,141 @@
+## All-in-one single-machine deployment.
+##
+## Intended for Raspberry Pi 4/5 (arm64) or any single Linux machine where
+## coordinator, node, and database all run on one host.
+##
+## Key differences from docker-compose.yml:
+##   - Node runs with network_mode: host for ONVIF/RTSP LAN discovery
+##   - PostgreSQL tuned for low-memory devices (Pi 4 = 4 GB, Pi 5 = 4-8 GB)
+##   - Caddy TLS proxy included (set DOMAIN env var)
+##   - Single node only — use docker-compose.node.yml to scale out
+##
+## Quick start:
+##   cp .env.single.example .env.single
+##   # Edit .env.single — at minimum set JWT_SECRET and DOMAIN
+##   docker compose -f docker-compose.single.yml --env-file .env.single up -d
+##
+## Access: https://<DOMAIN>  (Let's Encrypt) or https://<IP> (self-signed)
+
+services:
+  postgres:
+    build:
+      context: ./docker/postgres
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-postgres:latest
+    environment:
+      POSTGRES_DB:       cam64
+      POSTGRES_USER:     cam64
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cam64_dev}
+    # Do not expose postgres outside the compose network on a single machine.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Pi-tuned Postgres settings.
+    # Adjust shared_buffers to ~25% of available RAM; keep lower on Pi 4 (4 GB)
+    # to leave headroom for camera streams.
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c effective_cache_size=384MB
+      -c work_mem=2MB
+      -c maintenance_work_mem=32MB
+      -c max_connections=25
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=4MB
+      -c default_statistics_target=50
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cam64 -d cam64"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/migrate/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://cam64:${DB_PASSWORD:-cam64_dev}@postgres:5432/cam64
+    restart: on-failure
+
+  coordinator:
+    build:
+      context: .
+      dockerfile: docker/coordinator/Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-coordinator:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://cam64:${DB_PASSWORD:-cam64_dev}@postgres:5432/cam64
+      JWT_SECRET:   ${JWT_SECRET:?JWT_SECRET must be set}
+      BIND_ADDR:    0.0.0.0:8080
+      FRONTEND_DIR: /frontend
+      RUST_LOG:     ${RUST_LOG:-info}
+    # Port 8080 is mapped to the host loopback so the node (running in host
+    # network mode) can reach the coordinator at 127.0.0.1:8080.
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+  node:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-node:latest
+    depends_on:
+      coordinator:
+        condition: service_started
+    environment:
+      # Reach coordinator via loopback — coordinator's port 8080 is mapped to
+      # 127.0.0.1:8080 on the host above.
+      COORDINATOR_URL: http://127.0.0.1:8080
+      DATA_DIR:        /data
+      RUST_LOG:        ${RUST_LOG:-info}
+      S3_ENDPOINT:     ${S3_ENDPOINT:-}
+      S3_BUCKET:       ${S3_BUCKET:-}
+      S3_KEY_ID:       ${S3_KEY_ID:-}
+      S3_SECRET_KEY:   ${S3_SECRET_KEY:-}
+      S3_REGION:       ${S3_REGION:-us-east-1}
+      S3_PATH_STYLE:   ${S3_PATH_STYLE:-true}
+    volumes:
+      - node_data:/data
+    # Host networking gives the node direct LAN access, which is required for:
+    #   - ONVIF WS-Discovery (UDP multicast 239.255.255.250:3702)
+    #   - RTSP pull from cameras on the same subnet
+    #   - WebRTC ICE candidates on the local network
+    # Note: published `ports:` entries are IGNORED with network_mode: host.
+    # The node binds directly to all host interfaces:
+    #   8554 — RTSP ingest
+    #   8889 — WebRTC WHIP/WHEP
+    #   8890 — Playback HTTP server
+    network_mode: host
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      coordinator:
+        condition: service_started
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  node_data:
+  caddy_data:
+  caddy_config:
