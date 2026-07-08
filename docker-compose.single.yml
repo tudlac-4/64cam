@@ -80,7 +80,7 @@ services:
     # Port 8080 is mapped to the host loopback so the node (running in host
     # network mode) can reach the coordinator at 127.0.0.1:8080.
     ports:
-      - "127.0.0.1:8080:8080"
+      - "0.0.0.0:8080:8080"
     restart: unless-stopped
 
   node:
