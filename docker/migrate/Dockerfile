@@ -4,7 +4,7 @@ WORKDIR /build
 ARG TARGETPLATFORM
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends pkg-config libssl-dev && \
+    apt-get install -y --no-install-recommends pkg-config libssl-dev curl && \
     rm -rf /var/lib/apt/lists/*
 
 RUN case "$TARGETPLATFORM" in \
