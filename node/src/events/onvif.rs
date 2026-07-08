@@ -86,7 +86,7 @@ async fn subscribe_and_poll(
         );
 
         match client
-            .post(&sub_addr)
+            .post(sub_addr)
             .header("Content-Type", "application/soap+xml; charset=utf-8")
             .body(pull_body)
             .send()
