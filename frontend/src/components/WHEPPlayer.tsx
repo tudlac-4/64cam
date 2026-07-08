@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { useWHEP, type WHEPState } from '../hooks/useWHEP'
 import styles from './WHEPPlayer.module.css'
 
