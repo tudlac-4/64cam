@@ -20,7 +20,7 @@ services:
   postgres:
     build:
       context: ./docker/postgres
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-postgres:latest
+    image: 64cam-postgres:latest
     environment:
       POSTGRES_DB:       cam64
       POSTGRES_USER:     cam64
@@ -65,7 +65,7 @@ services:
     build:
       context: .
       dockerfile: docker/coordinator/Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-coordinator:latest
+    image: 64cam-coordinator:latest
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,7 +87,7 @@ services:
     build:
       context: .
       dockerfile: docker/node/Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/64cam-node:latest
+    image: 64cam-node:latest
     depends_on:
       coordinator:
         condition: service_started
