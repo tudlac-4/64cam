@@ -5,12 +5,12 @@ DO $$ BEGIN
         PERFORM partman.create_parent(
             p_parent_table => 'public.recordings',
             p_control      => 'started_at',
-            p_interval     => 'monthly'
+            p_interval     => '1 month'
         );
         PERFORM partman.create_parent(
             p_parent_table => 'public.events',
             p_control      => 'occurred_at',
-            p_interval     => 'monthly'
+            p_interval     => '1 month'
         );
     END IF;
 END $$;
